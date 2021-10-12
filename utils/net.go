@@ -13,26 +13,16 @@
 
 package utils
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
-func ParseIP(s string) (net.IP, int) {
-	ip := net.ParseIP(s)
-	if ip == nil {
-		return nil, 0
-	}
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '.':
-			return ip, 4
-		case ':':
-			return ip, 6
-		}
-	}
-	return nil, 0
-}
-
-func GetLocalIPv4Address() (ipv4Address string, err error) {
+func GetLocalIPv4Address() (string, error) {
 	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
 
 	for _, addr := range addrs {
 		ipNet, isIpNet := addr.(*net.IPNet)
@@ -43,5 +33,5 @@ func GetLocalIPv4Address() (ipv4Address string, err error) {
 			}
 		}
 	}
-	return
+	return "", fmt.Errorf("not fould ipv4 address")
 }
