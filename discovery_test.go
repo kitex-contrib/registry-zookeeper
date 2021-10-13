@@ -27,7 +27,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testConfigName = "zoo.cfg"
+)
+
 func TestZookeeperDiscovery(t *testing.T) {
+	//start test server
+	testServer := startTestServer(t)
+	defer testServer.Stop()
 
 	//register
 	r, err := zkRegistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)
@@ -83,6 +90,10 @@ func TestZookeeperDiscovery(t *testing.T) {
 }
 
 func TestZookeeperResolverWithAuth(t *testing.T) {
+	//start test server
+	testServer := startTestServer(t)
+	defer testServer.Stop()
+
 	//register
 	r, err := zkRegistry.NewZookeeperRegistryWithAuth([]string{"127.0.0.1:2181"}, 40*time.Second, "horizon", "horizon")
 	assert.Nil(t, err)
@@ -134,4 +145,20 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 0, len(result.Instances))
 	}
 
+}
+
+func startTestServer(t *testing.T) *server {
+	testServer, err := NewIntegrationTestServer(t, testConfigName, nil, nil)
+	requireNoError(t, err)
+	requireNoError(t, testServer.Start())
+	//wait server start
+	time.Sleep(time.Second * 3)
+	return testServer
+}
+
+func requireNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
+	if err != nil {
+		t.Logf("received unexpected error: %v", err)
+		t.Fatal(msgAndArgs...)
+	}
 }
