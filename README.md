@@ -8,14 +8,14 @@ Some applications use Zookeeper as service discovery.
 ```go
 import (
     ...
-	zkRegistry "github.com/kitex-contrib/registry-zookeeper/registry"
+	zkregistry "github.com/kitex-contrib/registry-zookeeper/registry"
 	"github.com/cloudwego/kitex/server"
     ...
 )
 
 func main() {
     ...
-	svr := echo.NewServer(new(EchoImpl), server.WithRegistry(zkRegistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)))
+	svr := echo.NewServer(new(EchoImpl), server.WithRegistry(zkregistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)))
 	if err := svr.Run(); err != nil {
 		log.Println("server stopped with error:", err)
 	} else {
