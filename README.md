@@ -1,6 +1,6 @@
 # registry-zookeeper
 
-Some application runtime use Zookeeper as service discovery.
+Some applications use Zookeeper as service discovery.
 
 ## How to use?
 
@@ -31,7 +31,7 @@ func main() {
 ```go
 import (
     ...
-	"github.com/kitex-contrib/registry-zookeeper/resolver"
+    "github.com/kitex-contrib/registry-zookeeper/resolver"
     "github.com/cloudwego/kitex/client"
     ...
 )

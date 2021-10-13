@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific
 
-package registry_zookeeper
+package test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/registry"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
-	zkRegistry "github.com/kitex-contrib/registry-zookeeper/registry"
+	zkregistry "github.com/kitex-contrib/registry-zookeeper/registry"
 	"github.com/kitex-contrib/registry-zookeeper/resolver"
 	"github.com/kitex-contrib/registry-zookeeper/utils"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +37,7 @@ func TestZookeeperDiscovery(t *testing.T) {
 	defer testServer.Stop()
 
 	//register
-	r, err := zkRegistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)
+	r, err := zkregistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)
 	assert.Nil(t, err)
 	tags := map[string]string{"group": "blue", "idc": "hd1"}
 	addr, _ := net.ResolveTCPAddr("tcp", ":9999")
@@ -95,7 +95,7 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 	defer testServer.Stop()
 
 	//register
-	r, err := zkRegistry.NewZookeeperRegistryWithAuth([]string{"127.0.0.1:2181"}, 40*time.Second, "horizon", "horizon")
+	r, err := zkregistry.NewZookeeperRegistryWithAuth([]string{"127.0.0.1:2181"}, 40*time.Second, "horizon", "horizon")
 	assert.Nil(t, err)
 	tags := map[string]string{"group": "blue", "idc": "hd1"}
 	addr, _ := net.ResolveTCPAddr("tcp", ":9999")
