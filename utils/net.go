@@ -33,5 +33,5 @@ func GetLocalIPv4Address() (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("not fould ipv4 address")
+	return "", fmt.Errorf("not found ipv4 address")
 }
