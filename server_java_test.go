@@ -1,6 +1,9 @@
+//Copyright (c) 2013, Samuel Stauffer <samuel@descolada.com>
+//All rights reserved.
+
 //copy from https://github.com/go-zookeeper/zk/blob/master/server_java_test.go
 
-package registry_zookeeper
+package test
 
 import (
 	"context"
