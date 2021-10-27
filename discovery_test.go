@@ -152,7 +152,18 @@ func startTestServer(t *testing.T) *server {
 	requireNoError(t, err)
 	requireNoError(t, testServer.Start())
 	//wait server start
-	time.Sleep(time.Second * 3)
+	var ok bool
+	for i := 0; i < 10; i++ {
+		_, err := net.Dial("tcp", "127.0.0.1:2181")
+		if err == nil {
+			ok = true
+			break
+		}
+		time.Sleep(30 * time.Second)
+	}
+	if !ok {
+		panic("zookeeper server start failed")
+	}
 	return testServer
 }
 
