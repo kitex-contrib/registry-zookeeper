@@ -26,5 +26,9 @@ jobs:
           go install mvdan.cc/gofumpt@latest
           test -z "$(gofumpt -s -l -extra .)"  || echo "Please run 'gofumpt -l -w -extra .'"
 
+      - name: Prepare Zookeeper
+        run: |
+          make prepare
+
       - name: Unit Test
-        run: go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: go test -v -race -timeout 600s -covermode=atomic -coverprofile=coverage.out ./...

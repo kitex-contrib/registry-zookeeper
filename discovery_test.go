@@ -32,11 +32,11 @@ const (
 )
 
 func TestZookeeperDiscovery(t *testing.T) {
-	//start test server
+	// start test server
 	testServer := startTestServer(t)
 	defer testServer.Stop()
 
-	//register
+	// register
 	r, err := zkregistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)
 	assert.Nil(t, err)
 	tags := map[string]string{"group": "blue", "idc": "hd1"}
@@ -45,14 +45,14 @@ func TestZookeeperDiscovery(t *testing.T) {
 	err = r.Register(info)
 	assert.Nil(t, err)
 
-	//resolve
+	// resolve
 	res, err := resolver.NewZookeeperResolver([]string{"127.0.0.1:2181"}, 40*time.Second)
 	assert.Nil(t, err)
 	target := res.Target(context.Background(), rpcinfo.NewEndpointInfo("product", "", nil, nil))
 	result, err := res.Resolve(context.Background(), target)
 	assert.Nil(t, err)
 
-	//compare data
+	// compare data
 	if len(result.Instances) == 0 {
 		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 1, 0)
 	} else if len(result.Instances) == 1 {
@@ -76,25 +76,24 @@ func TestZookeeperDiscovery(t *testing.T) {
 		}
 	}
 
-	//deregister
+	// deregister
 	err = r.Deregister(info)
 	assert.Nil(t, err)
 
-	//resolve again
+	// resolve again
 	result, err = res.Resolve(context.Background(), target)
 	assert.Nil(t, err)
 	if len(result.Instances) != 0 {
 		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 0, len(result.Instances))
 	}
-
 }
 
 func TestZookeeperResolverWithAuth(t *testing.T) {
-	//start test server
+	// start test server
 	testServer := startTestServer(t)
 	defer testServer.Stop()
 
-	//register
+	// register
 	r, err := zkregistry.NewZookeeperRegistryWithAuth([]string{"127.0.0.1:2181"}, 40*time.Second, "horizon", "horizon")
 	assert.Nil(t, err)
 	tags := map[string]string{"group": "blue", "idc": "hd1"}
@@ -103,14 +102,14 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 	err = r.Register(info)
 	assert.Nil(t, err)
 
-	//resolve
+	// resolve
 	res, err := resolver.NewZookeeperResolverWithAuth([]string{"127.0.0.1:2181"}, 40*time.Second, "horizon", "horizon")
 	assert.Nil(t, err)
 	target := res.Target(context.Background(), rpcinfo.NewEndpointInfo("product", "", nil, nil))
 	result, err := res.Resolve(context.Background(), target)
 	assert.Nil(t, err)
 
-	//compare data
+	// compare data
 	if len(result.Instances) == 0 {
 		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 1, 0)
 	} else if len(result.Instances) == 1 {
@@ -134,24 +133,23 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 		}
 	}
 
-	//deregister
+	// deregister
 	err = r.Deregister(info)
 	assert.Nil(t, err)
 
-	//resolve again
+	// resolve again
 	result, err = res.Resolve(context.Background(), target)
 	assert.Nil(t, err)
 	if len(result.Instances) != 0 {
 		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 0, len(result.Instances))
 	}
-
 }
 
 func startTestServer(t *testing.T) *server {
 	testServer, err := NewIntegrationTestServer(t, testConfigName, nil, nil)
 	requireNoError(t, err)
 	requireNoError(t, testServer.Start())
-	//wait server start
+	// wait server start
 	var ok bool
 	for i := 0; i < 10; i++ {
 		_, err := net.Dial("tcp", "127.0.0.1:2181")
