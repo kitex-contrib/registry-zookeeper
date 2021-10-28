@@ -11,7 +11,7 @@ else
 endif
 ZK_URL = "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZK_VERSION)/$(ZK).tar.gz"
 
-PACKAGES := $(shell go list ./... | grep -v examples)
+PACKAGES := $(shell go list ./...)
 
 .DEFAULT_GOAL := test
 
@@ -24,6 +24,7 @@ zookeeper: $(ZK)
 	# we link to a standard directory path so then the tests dont need to find based on version
 	# in the test code. this allows backward compatible testing.
 	ln -s $(ZK) zookeeper
+	ls -l zookeeper
 
 .PHONY: setup
 setup: zookeeper
