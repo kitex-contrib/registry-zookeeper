@@ -156,22 +156,3 @@ func (sc ServerConfig) Marshall(w io.Writer) error {
 	}
 	return nil
 }
-
-// this is a helper to wait for the zk connection to at least get to the HasSession state
-func waitForSession(ctx context.Context, eventChan <-chan zk.Event) error {
-	select {
-	case event, ok := <-eventChan:
-		// The eventChan is used solely to determine when the ZK conn has
-		// stopped.
-		if !ok {
-			return fmt.Errorf("connection closed before state reached")
-		}
-		if event.State == zk.StateHasSession {
-			return nil
-		}
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-
-	return nil
-}
