@@ -15,6 +15,7 @@ package registry
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -27,7 +28,7 @@ import (
 )
 
 type zookeeperRegistry struct {
-	con            *zk.Conn
+	conn           *zk.Conn
 	authOpen       bool
 	user, password string
 }
@@ -37,7 +38,7 @@ func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (regis
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{con: con}, nil
+	return &zookeeperRegistry{conn: con}, nil
 }
 
 func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (registry.Registry, error) {
@@ -53,7 +54,7 @@ func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{con: con, authOpen: true, user: user, password: password}, nil
+	return &zookeeperRegistry{conn: con, authOpen: true, user: user, password: password}, nil
 }
 
 func (z *zookeeperRegistry) Register(info *registry.Info) error {
@@ -68,6 +69,10 @@ func (z *zookeeperRegistry) Register(info *registry.Info) error {
 	return z.createNode(path, content, true)
 }
 
+/**
+  path format as follow:
+  /{ serviceName}/{ip}:{port}
+*/
 func buildPath(info *registry.Info) (string, error) {
 	var path string
 	if info == nil {
@@ -88,11 +93,11 @@ func buildPath(info *registry.Info) (string, error) {
 			return "", fmt.Errorf("registry info addr missing port")
 		}
 		if host == "" {
-			ip4, err := utils.GetLocalIPv4Address()
+			ipv4, err := utils.GetLocalIPv4Address()
 			if err != nil {
-				return "", fmt.Errorf("get local ipv4 error, cause %s", err)
+				return "", fmt.Errorf("get local ipv4 error, cause %w", err)
 			}
-			path = path + utils.Separator + ip4 + ":" + port
+			path = path + utils.Separator + ipv4 + ":" + port
 		} else {
 			path = path + utils.Separator + host + ":" + port
 		}
@@ -117,7 +122,7 @@ func (z *zookeeperRegistry) createNode(path string, content []byte, ephemeral bo
 	i := strings.LastIndex(path, utils.Separator)
 	if i > 0 {
 		err := z.createNode(path[0:i], nil, false)
-		if err != nil && !strings.Contains(err.Error(), utils.NodeExistError) {
+		if err != nil && !errors.Is(err, zk.ErrNodeExists) {
 			return err
 		}
 	}
@@ -126,24 +131,24 @@ func (z *zookeeperRegistry) createNode(path string, content []byte, ephemeral bo
 		flag = zk.FlagEphemeral
 	}
 	if z.authOpen {
-		_, err := z.con.Create(path, content, flag, zk.DigestACL(zk.PermAll, z.user, z.password))
+		_, err := z.conn.Create(path, content, flag, zk.DigestACL(zk.PermAll, z.user, z.password))
 		if err != nil {
-			return fmt.Errorf("create node [%s] with auth error, cause %s", path, err)
+			return fmt.Errorf("create node [%s] with auth error, cause %w", path, err)
 		}
 		return nil
 	} else {
-		_, err := z.con.Create(path, content, flag, zk.WorldACL(zk.PermAll))
+		_, err := z.conn.Create(path, content, flag, zk.WorldACL(zk.PermAll))
 		if err != nil {
-			return fmt.Errorf("create node [%s] error, cause %s", path, err)
+			return fmt.Errorf("create node [%s] error, cause %w", path, err)
 		}
 		return nil
 	}
 }
 
 func (z *zookeeperRegistry) deleteNode(path string) error {
-	err := z.con.Delete(path, -1)
+	err := z.conn.Delete(path, -1)
 	if err != nil {
-		return fmt.Errorf("delete node [%s] error, cause %s", path, err)
+		return fmt.Errorf("delete node [%s] error, cause %w", path, err)
 	}
 	return nil
 }

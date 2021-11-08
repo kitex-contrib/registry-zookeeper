@@ -1,6 +1,3 @@
-//Copyright (c) 2013, Samuel Stauffer <samuel@descolada.com>
-//All rights reserved.
-
 //copy from https://github.com/go-zookeeper/zk/blob/master/server_java_test.go
 
 package test
@@ -50,7 +47,7 @@ func NewIntegrationTestServer(t *testing.T, configPath string, stdout, stderr io
 	}
 	if _, err := os.Stat(zkPath); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("zk: could not find testing zookeeper bin path at %q: %v ", zkPath, err)
+			return nil, fmt.Errorf("zk: could not find testing zookeeper bin path at %q: %w ", zkPath, err)
 		}
 	}
 	// password is 'test'

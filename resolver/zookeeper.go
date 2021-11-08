@@ -94,7 +94,7 @@ func (r *zookeeperResolver) detailEndPoints(service, ep string) (discovery.Insta
 	en := new(entity.RegistryEntity)
 	err = json.Unmarshal(data, en)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal data [%s] error, cause %s", data, err)
+		return nil, fmt.Errorf("unmarshal data [%s] error, cause %w", data, err)
 	}
 	return discovery.NewInstance("tcp", ep, en.Weight, en.Tags), nil
 }
@@ -111,11 +111,11 @@ func (r *zookeeperResolver) getInstances(eps []string, service string) ([]discov
 			}
 			ins, err := r.detailEndPoints(service, ep)
 			if err != nil {
-				return []discovery.Instance{}, fmt.Errorf("detail endpoint [%s] info error, cause %s", ep, err)
+				return []discovery.Instance{}, fmt.Errorf("detail endpoint [%s] info error, cause %w", ep, err)
 			}
 			instances = append(instances, ins)
 		} else {
-			return []discovery.Instance{}, fmt.Errorf("parse node [%s] error, details info [%s]", ep, err)
+			return []discovery.Instance{}, fmt.Errorf("parse node [%s] error, details info [%w]", ep, err)
 		}
 	}
 	return instances, nil
