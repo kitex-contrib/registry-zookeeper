@@ -69,10 +69,8 @@ func (z *zookeeperRegistry) Register(info *registry.Info) error {
 	return z.createNode(path, content, true)
 }
 
-/**
-  path format as follow:
-  /{ serviceName}/{ip}:{port}
-*/
+//  path format as follows:
+//  /{serviceName}/{ip}:{port}
 func buildPath(info *registry.Info) (string, error) {
 	var path string
 	if info == nil {
