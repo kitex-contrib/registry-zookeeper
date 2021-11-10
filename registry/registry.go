@@ -34,27 +34,27 @@ type zookeeperRegistry struct {
 }
 
 func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (registry.Registry, error) {
-	con, _, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{conn: con}, nil
+	return &zookeeperRegistry{conn: conn}, nil
 }
 
 func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (registry.Registry, error) {
 	if user == "" || password == "" {
 		return nil, fmt.Errorf("user or password can't be empty")
 	}
-	con, _, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
 	auth := []byte(fmt.Sprintf("%s:%s", user, password))
-	err = con.AddAuth(utils.Scheme, auth)
+	err = conn.AddAuth(utils.Scheme, auth)
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{conn: con, authOpen: true, user: user, password: password}, nil
+	return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password}, nil
 }
 
 func (z *zookeeperRegistry) Register(info *registry.Info) error {
