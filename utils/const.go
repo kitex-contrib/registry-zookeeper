@@ -14,7 +14,6 @@
 package utils
 
 const (
-	Separator      = "/"
-	Scheme         = "digest"
-	NodeExistError = "zk: node already exists"
+	Separator = "/"
+	Scheme    = "digest"
 )
