@@ -42,7 +42,7 @@ func NewIntegrationTestServer(t *testing.T, configPath string, stdout, stderr io
 	// allow external systems to configure this zk server bin path.
 	zkPath := os.Getenv("ZOOKEEPER_BIN_PATH")
 	if zkPath == "" {
-		// default to a static reletive path that can be setup with a build system
+		// default to a static relative path that can be setup with a build system
 		zkPath = "zookeeper/bin"
 	}
 	if _, err := os.Stat(zkPath); err != nil {
@@ -91,7 +91,7 @@ type ServerConfig struct {
 	TickTime                 int    // Number of milliseconds of each tick
 	InitLimit                int    // Number of ticks that the initial synchronization phase can take
 	SyncLimit                int    // Number of ticks that can pass between sending a request and getting an acknowledgement
-	DataDir                  string // Direcrory where the snapshot is stored
+	DataDir                  string // Directory where the snapshot is stored
 	ClientPort               int    // Port at which clients will connect
 	AutoPurgeSnapRetainCount int    // Number of snapshots to retain in dataDir
 	AutoPurgePurgeInterval   int    // Purge task internal in hours (0 to disable auto purge)

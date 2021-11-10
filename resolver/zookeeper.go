@@ -29,7 +29,7 @@ import (
 )
 
 type zookeeperResolver struct {
-	con *zk.Conn
+	conn *zk.Conn
 }
 
 // NewZookeeperResolver create a zookeeper based resolver
@@ -38,21 +38,21 @@ func NewZookeeperResolver(servers []string, sessionTimeout time.Duration) (disco
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperResolver{con: con}, nil
+	return &zookeeperResolver{conn: con}, nil
 }
 
 // NewZookeeperResolver create a zookeeper based resolver with auth
 func NewZookeeperResolverWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (discovery.Resolver, error) {
-	con, _, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
 	auth := []byte(fmt.Sprintf("%s:%s", user, password))
-	err = con.AddAuth(utils.Scheme, auth)
+	err = conn.AddAuth(utils.Scheme, auth)
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperResolver{con: con}, nil
+	return &zookeeperResolver{conn: conn}, nil
 }
 
 // Target implements the Resolver interface.
@@ -82,12 +82,12 @@ func (r *zookeeperResolver) Resolve(ctx context.Context, desc string) (discovery
 }
 
 func (r *zookeeperResolver) getEndPoints(name string) ([]string, error) {
-	child, _, err := r.con.Children(name)
+	child, _, err := r.conn.Children(name)
 	return child, err
 }
 
 func (r *zookeeperResolver) detailEndPoints(service, ep string) (discovery.Instance, error) {
-	data, _, err := r.con.Get(service + utils.Separator + ep)
+	data, _, err := r.conn.Get(service + utils.Separator + ep)
 	if err != nil {
 		return nil, err
 	}
