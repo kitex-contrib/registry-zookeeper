@@ -34,11 +34,11 @@ type zookeeperResolver struct {
 
 // NewZookeeperResolver create a zookeeper based resolver
 func NewZookeeperResolver(servers []string, sessionTimeout time.Duration) (discovery.Resolver, error) {
-	con, _, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperResolver{conn: con}, nil
+	return &zookeeperResolver{conn: conn}, nil
 }
 
 // NewZookeeperResolver create a zookeeper based resolver with auth
