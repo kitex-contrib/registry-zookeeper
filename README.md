@@ -49,3 +49,15 @@ func main() {
 ## More info
 
 See discovery_test.go
+
+
+## Compatibility
+
+Compatible with server (3.4.0 - 3.7.0), If you want to use older server version, please modify the version in `Makefile` to test. 
+
+[zookeeper server version list]( https://zookeeper.apache.org/documentation.html)
+
+
+
+
+maintained by: horizonzy (horizonzy@apache.org)
