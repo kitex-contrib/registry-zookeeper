@@ -1,4 +1,7 @@
-# registry-zookeeper
+
+
+# registry-zookeeper (*This is a community driven project*)
+
 
 Some applications use Zookeeper as service discovery.
 
