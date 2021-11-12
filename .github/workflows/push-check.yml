@@ -38,3 +38,4 @@ jobs:
 
       - name: Benchmark
         run: go test -bench=. -benchmem -run=none ./...
+

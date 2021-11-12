@@ -12,3 +12,4 @@ prepare:
 # 	wget "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZOOKEEPRER_VERSION)/zookeeper-$(ZOOKEEPRER_VERSION).tar.gz"
 # 	tar -xvf zookeeper-$(ZOOKEEPRER_VERSION).tar.gz
 # 	mv zookeeper-$(ZOOKEEPRER_VERSION) zookeeper
+
