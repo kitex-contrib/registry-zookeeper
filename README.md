@@ -15,8 +15,13 @@ import (
 
 func main() {
     ...
-	svr := echo.NewServer(new(EchoImpl), server.WithRegistry(zkregistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)))
-	if err := svr.Run(); err != nil {
+	r,err := zkregistry.NewZookeeperRegistry([]string{"127.0.0.1:2181"}, 40*time.Second)
+	if err != nil{
+	    panic(err)
+	}
+	
+	svr := echo.NewServer(new(EchoImpl), server.WithRegistry(r))
+	if err = svr.Run(); err != nil {
 		log.Println("server stopped with error:", err)
 	} else {
 		log.Println("server stopped")
@@ -38,7 +43,11 @@ import (
 
 func main() {
     ...
-    client, err := echo.NewClient("echo", client.WithResolver(resolver.NewZookeeperResolver([]string{"127.0.0.1:2181"}, 40*time.Second)))
+    r,err := resolver.NewZookeeperResolver([]string{"127.0.0.1:2181"}, 40*time.Second)
+    if err != nil {
+        panic(err) 		
+    }
+    client, err := echo.NewClient("echo", client.WithResolver())
 	if err != nil {
 		log.Fatal(err)
 	}
