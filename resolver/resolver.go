@@ -62,14 +62,18 @@ func (r *zookeeperResolver) Target(ctx context.Context, target rpcinfo.EndpointI
 
 // Resolve implements the Resolver interface.
 func (r *zookeeperResolver) Resolve(ctx context.Context, desc string) (discovery.Result, error) {
-	if !strings.HasPrefix(desc, utils.Separator) {
-		desc = utils.Separator + desc
+	path := desc
+	if !strings.HasPrefix(path, utils.Separator) {
+		path = utils.Separator + path
 	}
-	eps, err := r.getEndPoints(desc)
+	eps, err := r.getEndPoints(path)
 	if err != nil {
 		return discovery.Result{}, err
 	}
-	instances, err := r.getInstances(eps, desc)
+	if len(eps) == 0 {
+		return discovery.Result{}, fmt.Errorf("no instance remains for %v", desc)
+	}
+	instances, err := r.getInstances(eps, path)
 	if err != nil {
 		return discovery.Result{}, err
 	}
@@ -81,13 +85,13 @@ func (r *zookeeperResolver) Resolve(ctx context.Context, desc string) (discovery
 	return res, nil
 }
 
-func (r *zookeeperResolver) getEndPoints(name string) ([]string, error) {
-	child, _, err := r.conn.Children(name)
+func (r *zookeeperResolver) getEndPoints(path string) ([]string, error) {
+	child, _, err := r.conn.Children(path)
 	return child, err
 }
 
-func (r *zookeeperResolver) detailEndPoints(service, ep string) (discovery.Instance, error) {
-	data, _, err := r.conn.Get(service + utils.Separator + ep)
+func (r *zookeeperResolver) detailEndPoints(path, ep string) (discovery.Instance, error) {
+	data, _, err := r.conn.Get(path + utils.Separator + ep)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +103,7 @@ func (r *zookeeperResolver) detailEndPoints(service, ep string) (discovery.Insta
 	return discovery.NewInstance("tcp", ep, en.Weight, en.Tags), nil
 }
 
-func (r *zookeeperResolver) getInstances(eps []string, service string) ([]discovery.Instance, error) {
+func (r *zookeeperResolver) getInstances(eps []string, path string) ([]discovery.Instance, error) {
 	instances := make([]discovery.Instance, 0, len(eps))
 	for _, ep := range eps {
 		if host, port, err := net.SplitHostPort(ep); err == nil {
@@ -109,7 +113,7 @@ func (r *zookeeperResolver) getInstances(eps []string, service string) ([]discov
 			if host == "" {
 				return []discovery.Instance{}, fmt.Errorf("missing host when parse node [%s]", ep)
 			}
-			ins, err := r.detailEndPoints(service, ep)
+			ins, err := r.detailEndPoints(path, ep)
 			if err != nil {
 				return []discovery.Instance{}, fmt.Errorf("detail endpoint [%s] info error, cause %w", ep, err)
 			}

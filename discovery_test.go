@@ -82,10 +82,8 @@ func TestZookeeperDiscovery(t *testing.T) {
 
 	// resolve again
 	result, err = res.Resolve(context.Background(), target)
-	assert.Nil(t, err)
-	if len(result.Instances) != 0 {
-		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 0, len(result.Instances))
-	}
+	assert.EqualError(t, err, "no instance remains for product")
+
 }
 
 func TestZookeeperResolverWithAuth(t *testing.T) {
@@ -140,9 +138,6 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 	// resolve again
 	result, err = res.Resolve(context.Background(), target)
 	assert.Nil(t, err)
-	if len(result.Instances) != 0 {
-		t.Errorf("instance num mismatch, expect: %d, in fact: %d", 0, len(result.Instances))
-	}
 }
 
 func startTestServer(t *testing.T) *server {
