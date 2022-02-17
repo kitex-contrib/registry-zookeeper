@@ -137,7 +137,7 @@ func TestZookeeperResolverWithAuth(t *testing.T) {
 
 	// resolve again
 	result, err = res.Resolve(context.Background(), target)
-	assert.Nil(t, err)
+	assert.EqualError(t, err, "no instance remains for product")
 }
 
 func startTestServer(t *testing.T) *server {
