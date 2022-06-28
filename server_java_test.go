@@ -1,16 +1,17 @@
-//copy from https://github.com/go-zookeeper/zk/blob/master/server_java_test.go
+// copy from https://github.com/go-zookeeper/zk/blob/master/server_java_test.go
 
 package test
 
 import (
 	"context"
 	"fmt"
-	"github.com/go-zookeeper/zk"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/go-zookeeper/zk"
 )
 
 type ErrMissingServerConfigField string

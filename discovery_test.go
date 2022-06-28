@@ -83,7 +83,6 @@ func TestZookeeperDiscovery(t *testing.T) {
 	// resolve again
 	result, err = res.Resolve(context.Background(), target)
 	assert.EqualError(t, err, "no instance remains for product")
-
 }
 
 func TestZookeeperResolverWithAuth(t *testing.T) {
