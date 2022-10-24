@@ -28,9 +28,10 @@ import (
 )
 
 type zookeeperRegistry struct {
-	conn           *zk.Conn
-	authOpen       bool
-	user, password string
+	conn     *zk.Conn
+	authOpen bool
+	user     string
+	password string
 }
 
 func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (registry.Registry, error) {
@@ -66,7 +67,9 @@ func (z *zookeeperRegistry) Register(info *registry.Info) error {
 	if err != nil {
 		return err
 	}
-	return z.createNode(path, content, true)
+	err = z.createNode(path, content, true)
+	go z.keepalive(path, content)
+	return err
 }
 
 //  path format as follows:
@@ -147,6 +150,51 @@ func (z *zookeeperRegistry) deleteNode(path string) error {
 	err := z.conn.Delete(path, -1)
 	if err != nil {
 		return fmt.Errorf("delete node [%s] error, cause %w", path, err)
+	}
+	return nil
+}
+
+func (z *zookeeperRegistry) keepalive(path string, content []byte) {
+	sessionID := z.conn.SessionID()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		cur := z.conn.SessionID()
+		// sessionID changed
+		if cur > 0 && sessionID != cur {
+			// re-ensureName
+			if err := z.ensureName(path, content, zk.FlagEphemeral); err != nil {
+				return
+			}
+			sessionID = cur
+		}
+	}
+}
+
+func (z *zookeeperRegistry) ensureName(path string, data []byte, flags int32) error {
+	if z.conn == nil {
+		return errors.New("zk connection closed")
+	}
+	exists, stat, err := z.conn.Exists(path)
+	if err != nil {
+		return err
+	}
+	if flags&zk.FlagEphemeral == zk.FlagEphemeral {
+		err = z.conn.Delete(path, stat.Version)
+		if err != nil && err != zk.ErrNoNode {
+			return err
+		}
+		exists = false
+	}
+	if !exists {
+		if z.authOpen {
+			_, err = z.conn.Create(path, data, flags, zk.DigestACL(zk.PermAll, z.user, z.password))
+		} else {
+			_, err = z.conn.Create(path, data, flags, zk.WorldACL(zk.PermAll))
+		}
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
