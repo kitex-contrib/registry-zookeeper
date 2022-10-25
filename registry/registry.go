@@ -28,10 +28,11 @@ import (
 )
 
 type zookeeperRegistry struct {
-	conn     *zk.Conn
-	authOpen bool
-	user     string
-	password string
+	conn           *zk.Conn
+	authOpen       bool
+	user           string
+	password       string
+	sessionTimeout time.Duration
 }
 
 func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (registry.Registry, error) {
@@ -39,7 +40,7 @@ func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (regis
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{conn: conn}, nil
+	return &zookeeperRegistry{conn: conn, sessionTimeout: sessionTimeout}, nil
 }
 
 func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (registry.Registry, error) {
@@ -55,7 +56,7 @@ func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration
 	if err != nil {
 		return nil, err
 	}
-	return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password}, nil
+	return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password, sessionTimeout: sessionTimeout}, nil
 }
 
 func (z *zookeeperRegistry) Register(info *registry.Info) error {
@@ -72,8 +73,8 @@ func (z *zookeeperRegistry) Register(info *registry.Info) error {
 	return err
 }
 
-//  path format as follows:
-//  /{serviceName}/{ip}:{port}
+// path format as follows:
+// /{serviceName}/{ip}:{port}
 func buildPath(info *registry.Info) (string, error) {
 	var path string
 	if info == nil {
@@ -156,7 +157,7 @@ func (z *zookeeperRegistry) deleteNode(path string) error {
 
 func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 	sessionID := z.conn.SessionID()
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(z.sessionTimeout / 2)
 	defer ticker.Stop()
 	for range ticker.C {
 		cur := z.conn.SessionID()
@@ -179,7 +180,7 @@ func (z *zookeeperRegistry) ensureName(path string, data []byte, flags int32) er
 	if err != nil {
 		return err
 	}
-	if flags&zk.FlagEphemeral == zk.FlagEphemeral {
+	if exists && flags&zk.FlagEphemeral == zk.FlagEphemeral {
 		err = z.conn.Delete(path, stat.Version)
 		if err != nil && err != zk.ErrNoNode {
 			return err
