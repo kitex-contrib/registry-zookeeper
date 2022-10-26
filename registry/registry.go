@@ -35,33 +35,19 @@ type zookeeperRegistry struct {
 	sessionTimeout time.Duration
 }
 
-var (
-	ErrConnectedTimedOut = errors.New("zk: connected timeout")
-)
-
 func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (registry.Registry, error) {
-	conn, event, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
-	ticker := time.NewTimer(sessionTimeout)
-	for {
-		select {
-		case e := <-event:
-			if e.State == zk.StateConnected {
-				return &zookeeperRegistry{conn: conn, sessionTimeout: sessionTimeout}, nil
-			}
-		case <-ticker.C:
-			return nil, ErrConnectedTimedOut
-		}
-	}
+	return &zookeeperRegistry{conn: conn, sessionTimeout: sessionTimeout}, nil
 }
 
 func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (registry.Registry, error) {
 	if user == "" || password == "" {
 		return nil, fmt.Errorf("user or password can't be empty")
 	}
-	conn, event, err := zk.Connect(servers, sessionTimeout)
+	conn, _, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -70,17 +56,7 @@ func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration
 	if err != nil {
 		return nil, err
 	}
-	ticker := time.NewTimer(sessionTimeout)
-	for {
-		select {
-		case e := <-event:
-			if e.State == zk.StateConnected {
-				return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password, sessionTimeout: sessionTimeout}, nil
-			}
-		case <-ticker.C:
-			return nil, ErrConnectedTimedOut
-		}
-	}
+	return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password, sessionTimeout: sessionTimeout}, nil
 }
 
 func (z *zookeeperRegistry) Register(info *registry.Info) error {
@@ -188,10 +164,9 @@ func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 	for range ticker.C {
 		cur := z.conn.SessionID()
 		if cur > 0 && sessionID != cur {
-			if err := z.ensureName(path, content, zk.FlagEphemeral); err != nil && err == zk.ErrConnectionClosed {
-				return
+			if err := z.ensureName(path, content, zk.FlagEphemeral); err == nil {
+				sessionID = cur
 			}
-			sessionID = cur
 		}
 	}
 }
