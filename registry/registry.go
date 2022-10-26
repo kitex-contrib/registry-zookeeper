@@ -69,7 +69,9 @@ func (z *zookeeperRegistry) Register(info *registry.Info) error {
 		return err
 	}
 	err = z.createNode(path, content, true)
-	go z.keepalive(path, content)
+	if err == nil {
+		go z.keepalive(path, content)
+	}
 	return err
 }
 
