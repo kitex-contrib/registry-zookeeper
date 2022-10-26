@@ -169,18 +169,13 @@ func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 }
 
 func (z *zookeeperRegistry) ensureName(path string, data []byte, flags int32) error {
-	exists, stat, err := z.conn.Exists(path)
+	exists, _, err := z.conn.Exists(path)
 	if err != nil {
 		return err
 	}
-	if exists && flags&zk.FlagEphemeral == zk.FlagEphemeral {
-		err = z.conn.Delete(path, stat.Version)
-		if err != nil && err != zk.ErrNoNode {
-			return err
-		}
-		exists = false
-	}
-	if !exists {
+	if exists {
+		return nil
+	} else {
 		if z.authOpen {
 			_, err = z.conn.Create(path, data, flags, zk.DigestACL(zk.PermAll, z.user, z.password))
 		} else {
