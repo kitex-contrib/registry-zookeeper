@@ -161,10 +161,8 @@ func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 	defer ticker.Stop()
 	for range ticker.C {
 		cur := z.conn.SessionID()
-		// sessionID changed
 		if cur > 0 && sessionID != cur {
-			// re-ensureName
-			if err := z.ensureName(path, content, zk.FlagEphemeral); err != nil {
+			if err := z.ensureName(path, content, zk.FlagEphemeral); err != nil && err == zk.ErrConnectionClosed {
 				return
 			}
 			sessionID = cur
@@ -173,9 +171,6 @@ func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 }
 
 func (z *zookeeperRegistry) ensureName(path string, data []byte, flags int32) error {
-	if z.conn == nil {
-		return errors.New("zk connection closed")
-	}
 	exists, stat, err := z.conn.Exists(path)
 	if err != nil {
 		return err
