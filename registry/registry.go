@@ -30,8 +30,7 @@ import (
 type zookeeperRegistry struct {
 	conn           *zk.Conn
 	authOpen       bool
-	user           string
-	password       string
+	user, password string
 	sessionTimeout time.Duration
 }
 
