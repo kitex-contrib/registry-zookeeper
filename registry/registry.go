@@ -160,7 +160,7 @@ func (z *zookeeperRegistry) keepalive(path string, content []byte) {
 	defer ticker.Stop()
 	for range ticker.C {
 		cur := z.conn.SessionID()
-		if cur > 0 && sessionID != cur {
+		if cur != 0 && sessionID != cur {
 			if err := z.ensureName(path, content, zk.FlagEphemeral); err == nil {
 				sessionID = cur
 			}
