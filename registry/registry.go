@@ -14,11 +14,11 @@
 package registry
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
-	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/kitex/pkg/registry"
@@ -27,126 +27,155 @@ import (
 	"github.com/kitex-contrib/registry-zookeeper/utils"
 )
 
+var (
+	ErrorZkConnectedTimedOut = errors.New("timed out waiting for zk connected")
+	ErrorNilRegistryInfo     = errors.New("registry info can't be nil")
+)
+
 type zookeeperRegistry struct {
+	sync.RWMutex
 	conn           *zk.Conn
-	authOpen       bool
-	user, password string
+	user           string
+	password       string
+	sessionTimeout time.Duration
+	canceler       map[string]context.CancelFunc
 }
 
 func NewZookeeperRegistry(servers []string, sessionTimeout time.Duration) (registry.Registry, error) {
-	conn, _, err := zk.Connect(servers, sessionTimeout)
-	if err != nil {
-		return nil, err
-	}
-	return &zookeeperRegistry{conn: conn}, nil
+	return NewZookeeperRegistryWithAuth(servers, sessionTimeout, "", "")
 }
 
 func NewZookeeperRegistryWithAuth(servers []string, sessionTimeout time.Duration, user, password string) (registry.Registry, error) {
-	if user == "" || password == "" {
-		return nil, fmt.Errorf("user or password can't be empty")
-	}
-	conn, _, err := zk.Connect(servers, sessionTimeout)
+	conn, event, err := zk.Connect(servers, sessionTimeout)
 	if err != nil {
 		return nil, err
 	}
-	auth := []byte(fmt.Sprintf("%s:%s", user, password))
-	err = conn.AddAuth(utils.Scheme, auth)
-	if err != nil {
-		return nil, err
+	if user != "" && password != "" {
+		if err := conn.AddAuth(utils.Scheme, []byte(fmt.Sprintf("%s:%s", user, password))); err != nil {
+			return nil, err
+		}
 	}
-	return &zookeeperRegistry{conn: conn, authOpen: true, user: user, password: password}, nil
+	ticker := time.NewTimer(sessionTimeout / 2)
+	for {
+		select {
+		case e := <-event:
+			if e.State == zk.StateConnected {
+				return &zookeeperRegistry{
+					user:           user,
+					password:       password,
+					sessionTimeout: sessionTimeout,
+					conn:           conn,
+					canceler:       make(map[string]context.CancelFunc),
+				}, nil
+			}
+		case <-ticker.C:
+			return nil, ErrorZkConnectedTimedOut
+		}
+	}
 }
 
 func (z *zookeeperRegistry) Register(info *registry.Info) error {
-	path, err := buildPath(info)
-	if err != nil {
-		return err
-	}
-	content, err := json.Marshal(&entity.RegistryEntity{Weight: info.Weight, Tags: info.Tags})
-	if err != nil {
-		return err
-	}
-	return z.createNode(path, content, true)
-}
-
-//  path format as follows:
-//  /{serviceName}/{ip}:{port}
-func buildPath(info *registry.Info) (string, error) {
-	var path string
 	if info == nil {
-		return "", fmt.Errorf("registry info can't be nil")
+		return ErrorNilRegistryInfo
 	}
-	if info.ServiceName == "" {
-		return "", fmt.Errorf("registry info service name can't be empty")
+	ne := entity.MustNewNodeEntity(info)
+	path, err := ne.Path()
+	if err != nil {
+		return err
 	}
-	if info.Addr == nil {
-		return "", fmt.Errorf("registry info addr can't be nil")
+	content, err := ne.Content()
+	if err != nil {
+		return err
 	}
-	if !strings.HasPrefix(info.ServiceName, utils.Separator) {
-		path = utils.Separator + info.ServiceName
+	err = z.createNode(path, content, true)
+	if err != nil {
+		return err
 	}
-
-	if host, port, err := net.SplitHostPort(info.Addr.String()); err == nil {
-		if port == "" {
-			return "", fmt.Errorf("registry info addr missing port")
-		}
-		if host == "" {
-			ipv4, err := utils.GetLocalIPv4Address()
-			if err != nil {
-				return "", fmt.Errorf("get local ipv4 error, cause %w", err)
-			}
-			path = path + utils.Separator + ipv4 + ":" + port
-		} else {
-			path = path + utils.Separator + host + ":" + port
-		}
-	} else {
-		return "", fmt.Errorf("parse registry info addr error")
-	}
-	return path, nil
+	ctx, cancel := context.WithCancel(context.Background())
+	z.Lock()
+	defer z.Unlock()
+	z.canceler[path] = cancel
+	go z.keepalive(ctx, path, content)
+	return nil
 }
 
 func (z *zookeeperRegistry) Deregister(info *registry.Info) error {
 	if info == nil {
-		return fmt.Errorf("registry info can't be nil")
+		return ErrorNilRegistryInfo
 	}
-	path, err := buildPath(info)
+	ne := entity.MustNewNodeEntity(info)
+	path, err := ne.Path()
 	if err != nil {
 		return err
+	}
+	z.Lock()
+	defer z.Unlock()
+	cancel, ok := z.canceler[path]
+	if ok {
+		cancel()
+		delete(z.canceler, path)
 	}
 	return z.deleteNode(path)
 }
 
 func (z *zookeeperRegistry) createNode(path string, content []byte, ephemeral bool) error {
-	i := strings.LastIndex(path, utils.Separator)
-	if i > 0 {
-		err := z.createNode(path[0:i], nil, false)
-		if err != nil && !errors.Is(err, zk.ErrNodeExists) {
+	exists, stat, err := z.conn.Exists(path)
+	if err != nil {
+		return err
+	}
+	// ephemeral nodes handling after restart
+	// fixes a race condition if the server crashes without using CreateProtectedEphemeralSequential()
+	// https://github.com/go-kratos/kratos/blob/main/contrib/registry/zookeeper/register.go
+	if exists && ephemeral {
+		err = z.conn.Delete(path, stat.Version)
+		if err != nil && err != zk.ErrNoNode {
+			return err
+		}
+		exists = false
+	}
+	if !exists {
+		i := strings.LastIndex(path, utils.Separator)
+		if i > 0 {
+			err := z.createNode(path[0:i], nil, false)
+			if err != nil && !errors.Is(err, zk.ErrNodeExists) {
+				return err
+			}
+		}
+		var flag int32
+		if ephemeral {
+			flag = zk.FlagEphemeral
+		}
+		if z.user != "" && z.password != "" {
+			_, err = z.conn.Create(path, content, flag, zk.DigestACL(zk.PermAll, z.user, z.password))
+		} else {
+			_, err = z.conn.Create(path, content, flag, zk.WorldACL(zk.PermAll))
+		}
+		if err != nil {
 			return err
 		}
 	}
-	var flag int32
-	if ephemeral {
-		flag = zk.FlagEphemeral
-	}
-	if z.authOpen {
-		_, err := z.conn.Create(path, content, flag, zk.DigestACL(zk.PermAll, z.user, z.password))
-		if err != nil {
-			return fmt.Errorf("create node [%s] with auth error, cause %w", path, err)
-		}
-		return nil
-	} else {
-		_, err := z.conn.Create(path, content, flag, zk.WorldACL(zk.PermAll))
-		if err != nil {
-			return fmt.Errorf("create node [%s] error, cause %w", path, err)
-		}
-		return nil
-	}
+	return nil
 }
 
 func (z *zookeeperRegistry) deleteNode(path string) error {
-	err := z.conn.Delete(path, -1)
-	if err != nil {
-		return fmt.Errorf("delete node [%s] error, cause %w", path, err)
+	return z.conn.Delete(path, -1)
+}
+
+func (z *zookeeperRegistry) keepalive(ctx context.Context, path string, content []byte) {
+	sessionID := z.conn.SessionID()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cur := z.conn.SessionID()
+			if cur != 0 && sessionID != cur {
+				if err := z.createNode(path, content, true); err == nil {
+					sessionID = cur
+				}
+			}
+		}
 	}
-	return nil
 }
