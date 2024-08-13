@@ -65,7 +65,8 @@ func buildPath(info *registry.Info) (string, error) {
 		if port == "" {
 			return "", fmt.Errorf("registry info addr missing port")
 		}
-		if host == "" {
+		ip := net.ParseIP(host)
+		if ip == nil || ip.IsUnspecified() {
 			ipv4, err := utils.GetLocalIPv4Address()
 			if err != nil {
 				return "", fmt.Errorf("get local ipv4 error, cause %w", err)
